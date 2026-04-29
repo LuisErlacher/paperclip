@@ -1648,19 +1648,55 @@ export function routineService(
           completedAt: routineRuns.completedAt,
           createdAt: routineRuns.createdAt,
           updatedAt: routineRuns.updatedAt,
+          triggerKind: routineTriggers.kind,
+          triggerLabel: routineTriggers.label,
+          issueIdentifier: issues.identifier,
+          issueTitle: issues.title,
+          issueStatus: issues.status,
+          issuePriority: issues.priority,
+          issueUpdatedAt: issues.updatedAt,
         })
         .from(routineRuns)
+        .leftJoin(routineTriggers, eq(routineRuns.triggerId, routineTriggers.id))
+        .leftJoin(issues, eq(routineRuns.linkedIssueId, issues.id))
         .where(and(eq(routineRuns.id, runId), eq(routineRuns.companyId, companyId)))
         .limit(1);
       const row = rows[0];
       if (!row) return null;
       return {
-        ...row,
+        id: row.id,
+        companyId: row.companyId,
+        routineId: row.routineId,
+        triggerId: row.triggerId,
         source: row.source as RoutineRunSummary["source"],
         status: row.status as RoutineRunSummary["status"],
+        triggeredAt: row.triggeredAt,
+        idempotencyKey: row.idempotencyKey,
         triggerPayload: row.triggerPayload as Record<string, unknown> | null,
-        linkedIssue: null,
-        trigger: null,
+        dispatchFingerprint: row.dispatchFingerprint,
+        linkedIssueId: row.linkedIssueId,
+        coalescedIntoRunId: row.coalescedIntoRunId,
+        failureReason: row.failureReason,
+        completedAt: row.completedAt,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        linkedIssue: row.linkedIssueId
+          ? {
+            id: row.linkedIssueId,
+            identifier: row.issueIdentifier,
+            title: row.issueTitle ?? "Routine execution",
+            status: row.issueStatus ?? "todo",
+            priority: row.issuePriority ?? "medium",
+            updatedAt: row.issueUpdatedAt ?? row.updatedAt,
+          }
+          : null,
+        trigger: row.triggerId
+          ? {
+            id: row.triggerId,
+            kind: row.triggerKind as NonNullable<RoutineRunSummary["trigger"]>["kind"],
+            label: row.triggerLabel,
+          }
+          : null,
       };
     },
 
