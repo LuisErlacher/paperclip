@@ -1629,6 +1629,41 @@ export function routineService(
       }));
     },
 
+    getRunById: async (runId: string, companyId: string): Promise<RoutineRunSummary | null> => {
+      const rows = await db
+        .select({
+          id: routineRuns.id,
+          companyId: routineRuns.companyId,
+          routineId: routineRuns.routineId,
+          triggerId: routineRuns.triggerId,
+          source: routineRuns.source,
+          status: routineRuns.status,
+          triggeredAt: routineRuns.triggeredAt,
+          idempotencyKey: routineRuns.idempotencyKey,
+          triggerPayload: routineRuns.triggerPayload,
+          dispatchFingerprint: routineRuns.dispatchFingerprint,
+          linkedIssueId: routineRuns.linkedIssueId,
+          coalescedIntoRunId: routineRuns.coalescedIntoRunId,
+          failureReason: routineRuns.failureReason,
+          completedAt: routineRuns.completedAt,
+          createdAt: routineRuns.createdAt,
+          updatedAt: routineRuns.updatedAt,
+        })
+        .from(routineRuns)
+        .where(and(eq(routineRuns.id, runId), eq(routineRuns.companyId, companyId)))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        ...row,
+        source: row.source as RoutineRunSummary["source"],
+        status: row.status as RoutineRunSummary["status"],
+        triggerPayload: row.triggerPayload as Record<string, unknown> | null,
+        linkedIssue: null,
+        trigger: null,
+      };
+    },
+
     tickScheduledTriggers: async (now: Date = new Date()) => {
       const due = await db
         .select({
