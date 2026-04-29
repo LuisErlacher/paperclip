@@ -160,11 +160,10 @@ export function routineRoutes(
 
   router.get("/routine-runs/:runId", async (req, res) => {
     const runId = req.params.runId as string;
-    const companyId = req.actor.companyId;
-    if (!companyId) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
+    if (req.actor.type !== "agent" || !req.actor.companyId) {
+      throw forbidden("Agent authentication required");
     }
+    const companyId = req.actor.companyId;
     const run = await svc.getRunById(runId, companyId);
     if (!run) {
       res.status(404).json({ error: "Routine run not found" });

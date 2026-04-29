@@ -130,4 +130,19 @@ describe("GET /routine-runs/:runId", () => {
     expect(res.status).toBe(404);
     expect(mockRoutineService.getRunById).toHaveBeenCalledWith(RUN_ID, COMPANY_B);
   });
+
+  it("returns 403 for a board actor", async () => {
+    const boardActor = {
+      type: "board",
+      userId: "u1",
+      companyIds: ["c1"],
+      source: "session",
+    };
+
+    const app = await createApp(boardActor);
+    const res = await request(app).get(`/api/routine-runs/${RUN_ID}`);
+
+    expect(res.status).toBe(403);
+    expect(mockRoutineService.getRunById).not.toHaveBeenCalled();
+  });
 });
