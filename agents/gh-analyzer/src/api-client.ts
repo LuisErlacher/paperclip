@@ -25,7 +25,8 @@ export type CreateIssueInput = {
 
 export class PaperclipApiError extends Error {
   constructor(public status: number, public body: string) {
-    super(`Paperclip API ${status}: ${body.slice(0, 500)}`);
+    const preview = body.slice(0, 500) || "(empty response body)";
+    super(`Paperclip API ${status}: ${preview}`);
   }
 }
 
@@ -61,6 +62,10 @@ export class PaperclipClient {
     return this.request("GET", `/api/routine-runs/${encodeURIComponent(runId)}`);
   }
 
+  /**
+   * Fetches an issue. Accepts both `{issue: IssueSummary}` (route-test response shape)
+   * and bare `IssueSummary` (real API shape) — kept compatible while routes evolve.
+   */
   async getIssue(issueId: string): Promise<IssueSummary> {
     const res = await this.request<{ issue: IssueSummary } | IssueSummary>(
       "GET",
@@ -69,6 +74,10 @@ export class PaperclipClient {
     return "issue" in (res as object) ? (res as { issue: IssueSummary }).issue : (res as IssueSummary);
   }
 
+  /**
+   * Lists issues filtered by projectId. Accepts both `{items: IssueSummary[]}` and
+   * bare arrays — kept compatible while routes evolve.
+   */
   async listProjectIssues(companyId: string, projectId: string): Promise<IssueSummary[]> {
     const path = `/api/companies/${encodeURIComponent(companyId)}/issues?projectId=${encodeURIComponent(projectId)}&limit=200`;
     const res = await this.request<{ items: IssueSummary[] } | IssueSummary[]>("GET", path);
