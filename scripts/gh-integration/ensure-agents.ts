@@ -15,7 +15,6 @@ type AgentSpec = {
   name: string;
   adapterType: string;
   adapterConfig: Record<string, unknown>;
-  model: string;
 };
 
 const ANALYZER: AgentSpec = {
@@ -26,17 +25,15 @@ const ANALYZER: AgentSpec = {
     args: ["/app/agents/gh-analyzer/dist/index.js"],
     timeoutSec: 120,
     env: {
-      ANTHROPIC_API_KEY: { secretRef: process.env.ANTHROPIC_API_KEY_SECRET_ID ?? "" },
+      ANTHROPIC_API_KEY: { type: "secret_ref", secretId: mustEnv("ANTHROPIC_API_KEY_SECRET_ID") },
     },
   },
-  model: "claude-haiku-4-5-20251001",
 };
 
 const CODADOR: AgentSpec = {
   name: "gh-codador",
   adapterType: "claude_local",
   adapterConfig: { model: "claude-sonnet-4-6" },
-  model: "claude-sonnet-4-6",
 };
 
 async function main(): Promise<void> {
@@ -59,7 +56,6 @@ async function main(): Promise<void> {
         body: JSON.stringify({
           adapterType: spec.adapterType,
           adapterConfig: spec.adapterConfig,
-          model: spec.model,
         }),
       });
       if (!res.ok) throw new Error(`PATCH ${spec.name}: ${res.status} ${await res.text()}`);
