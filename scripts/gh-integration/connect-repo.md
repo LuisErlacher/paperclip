@@ -55,13 +55,15 @@ TRIGGER_RES=$(curl -X POST $PAPERCLIP_API_URL/api/routines/$ROUTINE_ID/triggers 
   -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "kind": "webhook", "label": "github", "enabled": true, "signingMode": "github_hmac" }')
-TRIGGER_PUBLIC_ID=$(echo "$TRIGGER_RES" | jq -r '.publicId')
-TRIGGER_SECRET=$(echo "$TRIGGER_RES" | jq -r '.generatedSecret') # check actual response field name
+TRIGGER_PUBLIC_ID=$(echo "$TRIGGER_RES" | jq -r '.trigger.publicId')
+TRIGGER_SECRET=$(echo "$TRIGGER_RES" | jq -r '.secretMaterial.webhookSecret')
 ```
 
 Capture both `TRIGGER_PUBLIC_ID` and the generated `TRIGGER_SECRET`.
 
 ### 3. Configure the GitHub webhook
+
+> ⚠️ If `PAPERCLIP_API_URL` inside the container is set to `localhost`, the trigger response's `webhookUrl` will use `localhost` too — replace the host with your public URL before pasting into GitHub. See "Webhook URL gotcha" at the bottom of this runbook.
 
 In GitHub repo Settings → Webhooks → Add webhook:
 
