@@ -1,18 +1,42 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { execute } from "./execute.js";
 import * as utils from "../utils.js";
+
+const mockRunChildProcess = vi.hoisted(() =>
+  vi.fn(
+    async (
+      _runId: string,
+      _cmd: string,
+      _args: string[],
+      _opts: {
+        cwd: string;
+        env: Record<string, string>;
+        timeoutSec: number;
+        graceSec: number;
+        onLog: (stream: "stdout" | "stderr", chunk: string) => Promise<void>;
+      },
+    ) => ({
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+      stdout: "",
+      stderr: "",
+    }),
+  ),
+);
 
 vi.mock("../utils.js", async () => {
   const actual = await vi.importActual<typeof utils>("../utils.js");
   return {
     ...actual,
-    runChildProcess: vi.fn(async (_runId, _cmd, _args, opts) => {
-      // capture env for assertion
-      (globalThis as any).__capturedEnv = opts.env;
-      return { exitCode: 0, signal: null, timedOut: false, stdout: "", stderr: "" };
-    }),
-    resolveCommandForLogs: vi.fn(async (cmd) => cmd),
+    runChildProcess: mockRunChildProcess,
+    // prevent real shell resolution from leaking into the test
+    resolveCommandForLogs: vi.fn(async (cmd: string) => cmd),
   };
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
 });
 
 describe("process adapter env injection", () => {
@@ -25,9 +49,10 @@ describe("process adapter env injection", () => {
       onMeta: async () => {},
     } as any);
 
-    const env = (globalThis as any).__capturedEnv as Record<string, string>;
-    expect(env.PAPERCLIP_RUN_ID).toBe("run-abc-123");
-    expect(env.PAPERCLIP_AGENT_ID).toBe("agent-1");
-    expect(env.PAPERCLIP_COMPANY_ID).toBe("co-1");
+    expect(mockRunChildProcess).toHaveBeenCalledOnce();
+    const opts = mockRunChildProcess.mock.calls[0]![3];
+    expect(opts.env.PAPERCLIP_RUN_ID).toBe("run-abc-123");
+    expect(opts.env.PAPERCLIP_AGENT_ID).toBe("agent-1");
+    expect(opts.env.PAPERCLIP_COMPANY_ID).toBe("co-1");
   });
 });
