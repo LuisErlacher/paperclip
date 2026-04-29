@@ -3,16 +3,37 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    ports:
-      - "${PAPERCLIP_PORT:-3100}:3100"
+    expose:
+      - "3100"
     environment:
       HOST: "0.0.0.0"
       PAPERCLIP_HOME: "/paperclip"
+      USER_UID: "${USER_UID:-1000}"
+      USER_GID: "${USER_GID:-1000}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
+      ZAI_API_KEY: "${ZAI_API_KEY:-}"
+      GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
       PAPERCLIP_PUBLIC_URL: "${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}"
+      PAPERCLIP_API_URL: "${PAPERCLIP_API_URL:-http://localhost:3100}"
+      PAPERCLIP_RUNTIME_API_URL: "http://localhost:3100"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}"
     volumes:
       - "${PAPERCLIP_DATA_DIR:-../data/docker-paperclip}:/paperclip"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.paperclip.rule=Host(`paper.simplafy.com.br`)"
+      - "traefik.http.routers.paperclip.entrypoints=websecure"
+      - "traefik.http.routers.paperclip.tls=true"
+      - "traefik.http.routers.paperclip.tls.certresolver=le"
+      - "traefik.http.services.paperclip.loadbalancer.server.port=3100"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
