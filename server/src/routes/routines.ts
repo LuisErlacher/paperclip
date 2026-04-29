@@ -158,6 +158,22 @@ export function routineRoutes(
     res.json(result);
   });
 
+  router.get("/routine-runs/:runId", async (req, res) => {
+    const runId = req.params.runId as string;
+    const companyId = req.actor.companyId;
+    if (!companyId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    const run = await svc.getRunById(runId, companyId);
+    if (!run) {
+      res.status(404).json({ error: "Routine run not found" });
+      return;
+    }
+    assertCompanyAccess(req, run.companyId);
+    res.json(run);
+  });
+
   router.post("/routines/:id/triggers", validate(createRoutineTriggerSchema), async (req, res) => {
     const routine = await assertCanManageExistingRoutine(req, req.params.id as string);
     if (!routine) {
