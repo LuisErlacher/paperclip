@@ -55,4 +55,34 @@ describe("process adapter env injection", () => {
     expect(opts.env.PAPERCLIP_AGENT_ID).toBe("agent-1");
     expect(opts.env.PAPERCLIP_COMPANY_ID).toBe("co-1");
   });
+
+  it("injects PAPERCLIP_API_KEY from ctx.authToken when not set in config", async () => {
+    await execute({
+      runId: "run-jwt-test",
+      agent: { id: "agent-2", companyId: "co-2" },
+      config: { command: "echo" },
+      authToken: "jwt-token-from-server",
+      onLog: async () => {},
+      onMeta: async () => {},
+    } as any);
+
+    expect(mockRunChildProcess).toHaveBeenCalledOnce();
+    const opts = mockRunChildProcess.mock.calls[0]![3];
+    expect(opts.env.PAPERCLIP_API_KEY).toBe("jwt-token-from-server");
+  });
+
+  it("preserves explicit PAPERCLIP_API_KEY from config.env and does not overwrite it", async () => {
+    await execute({
+      runId: "run-explicit-key",
+      agent: { id: "agent-3", companyId: "co-3" },
+      config: { command: "echo", env: { PAPERCLIP_API_KEY: "explicit-key-from-config" } },
+      authToken: "jwt-token-should-not-win",
+      onLog: async () => {},
+      onMeta: async () => {},
+    } as any);
+
+    expect(mockRunChildProcess).toHaveBeenCalledOnce();
+    const opts = mockRunChildProcess.mock.calls[0]![3];
+    expect(opts.env.PAPERCLIP_API_KEY).toBe("explicit-key-from-config");
+  });
 });

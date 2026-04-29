@@ -21,6 +21,11 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const envConfig = parseObject(config.env);
   const env: Record<string, string> = { ...buildPaperclipEnv(agent) };
   env.PAPERCLIP_RUN_ID = runId;
+  // Inject the locally-issued agent JWT as PAPERCLIP_API_KEY when the framework
+  // provides one and the adapter config didn't already set it explicitly.
+  if (ctx.authToken && !envConfig.PAPERCLIP_API_KEY) {
+    env.PAPERCLIP_API_KEY = ctx.authToken;
+  }
   for (const [k, v] of Object.entries(envConfig)) {
     if (typeof v === "string") env[k] = v;
   }
