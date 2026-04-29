@@ -45,6 +45,13 @@ describe("PaperclipClient", () => {
     expect(url).toContain("projectId=p1");
   });
 
+  it("listProjectIssues handles bare-array response", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify([{ id: "i1", description: "x" }]), { status: 200 }));
+    const items = await client.listProjectIssues("c1", "p1");
+    expect(items).toHaveLength(1);
+    expect(items[0].id).toBe("i1");
+  });
+
   it("createIssue → POST /companies/:cid/issues", async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ id: "i2" }), { status: 201 }));
     await client.createIssue("c1", { projectId: "p1", title: "t", description: "d", priority: "high" });
