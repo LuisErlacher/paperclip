@@ -51,7 +51,12 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 WORKDIR /app
 COPY --chown=node:node --from=build /app /app
-RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai playwright \
+RUN npm install --global --omit=dev \
+       @anthropic-ai/claude-code@latest \
+       @openai/codex@latest \
+       opencode-ai \
+       playwright \
+       @playwright/cli@latest \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
        openssh-client jq pipx python3-venv \
@@ -61,15 +66,25 @@ RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/cod
        libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 \
        libxtst6 libcups2 libdbus-1-3 libdrm2 libatk1.0-0 libatk-bridge2.0-0 \
        libatspi2.0-0 fonts-liberation \
+       libcairo2 libxkbcommon0 libpangocairo-1.0-0 \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /paperclip /opt/playwright \
   && chown node:node /paperclip /opt/playwright
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
 
+# Install Chromium + Google Chrome stable. Chrome is required by `playwright-cli`
+# (used by browser-qa / playwright-cli skills) which defaults to channel "chrome"
+# and refuses to fall back to chromium without an explicit `--browser` flag.
 RUN cd /app \
-  && PLAYWRIGHT_BROWSERS_PATH=/opt/playwright npx playwright install chromium \
-  && chown -R node:node /opt/playwright
+  && PLAYWRIGHT_BROWSERS_PATH=/opt/playwright npx playwright install chromium chrome \
+  && chown -R node:node /opt/playwright \
+  && ldd /opt/playwright/chromium-*/chrome-linux*/chrome | grep -E "not found" \
+       && (echo "ERROR: Chromium has unresolved shared libs — add them to apt-get above." && exit 1) \
+       || true \
+  && /opt/playwright/chromium-*/chrome-linux*/chrome --version \
+  && google-chrome --version \
+  && playwright-cli --version
 
 # Graphify — Karpathy LLM Wiki knowledge graph CLI
 RUN PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install graphifyy \
