@@ -46,6 +46,72 @@ Justificativa técnica: o `exclude` no branch `approved` foi introduzido para pr
 
 ---
 
-## Verifier review (Verifier preenche)
+## Verifier review (round 1)
 
-(seção vazia até Verifier responder)
+### Aprovados
+
+- **Decisão técnica (Opção 3)** — APROVADO. Justificativa sólida: anti-auto-aprovação vem de `principalsEqual(currentParticipant, actor)`, não do `exclude`. Confere com a recomendação do CTO em [SIMAA-2205](/SIMAA/issues/SIMAA-2205).
+- **Fix cirúrgico de 1 linha** — APROVADO. Builder revisou os 5 call sites de `selectStageParticipant` (linhas 656, 664, 717-720, 816, 841) e isolou a mudança no path `approved`. Escopo mínimo.
+- **Teste cenário bloqueante** — APROVADO. Traduz spec critério #1 em PASS/FAIL claro.
+- **Teste anti-auto-aprovação preservado** — APROVADO. Cobre spec critério #2.
+- **"Fora do escopo"** — APROVADO. Restrição explícita das outras 4 chamadas.
+
+### Changes requested
+
+1. **Spec critério #4 não está totalmente coberto.** Contract inclui apenas `pnpm vitest run` no arquivo isolado + `typecheck`. Faltam: (a) suite completa para garantir não-regressão; (b) build do server para pegar erros de bundle não cobertos por typecheck.
+
+2. **Spec critério #6 ausente dos "Critérios de aceite".** O hand-off pós-merge (comment em [SIMAA-2205](/SIMAA/issues/SIMAA-2205) sinalizando que o motor foi corrigido e nomeando quem orquestra o redeploy) é critério do spec mas não aparece no contrato.
+
+3. **Nit — identificação do runner.** Contract assume `pnpm vitest` mas o spec menciona "Builder consulta `server/package.json` para identificar runner". Confirmar runner real.
+
+**Veredito: REJEITADO — round 1.** Builder revisa itens 1, 2 e 3 e reatribui ao Verifier com `[contract:revised]`.
+
+---
+
+## Builder revision 1
+
+### (c) Runner confirmado — `server/package.json`
+
+`server/package.json` **não tem script `test`**. O Paperclip core usa **Vitest** configurado na raiz via `vitest.config.ts` (projetos incluídos: `packages/shared`, `packages/db`, `packages/adapter-utils`, `server`, `ui`, `cli`, etc.). O runner para os testes do servidor é invocado **a partir do root da worktree**, não dentro de `server/`. Runner confirmado: **Vitest** (não bun:test).
+
+### (a) "Como vou verificar" — versão revisada
+
+Substituindo os checks 1 e 2 do round 1:
+
+1. **Teste do arquivo modificado** (smoke rápido, a partir do root da worktree):
+   `pnpm vitest run server/src/__tests__/issue-execution-policy.test.ts`
+   → confirma que os 2 novos testes passam + nenhum teste existente no arquivo regrediu.
+
+2. **Suite completa do server** (não-regressão, a partir do root da worktree):
+   `pnpm vitest run --project server`
+   → todos os testes do pacote `server` passam; garante que a remoção do `exclude` não quebrou nenhum outro teste que dependia do comportamento anterior.
+
+3. **Build do server** (compilação, a partir do root da worktree):
+   `pnpm --filter @paperclipai/server build`
+   → `tsc && cp onboarding-assets` completa sem erro; captura erros de bundle/deps não detectados por `typecheck --noEmit`.
+
+4. **Typecheck** (já estava no round 1, mantido):
+   `pnpm --filter @paperclipai/server typecheck` → sem erros TypeScript.
+
+5. Inspeção visual do diff: única mudança em `issue-execution-policy.ts` é a remoção do `exclude` na linha ~719.
+
+### (b) Critérios de aceite — versão revisada (adicionando #6)
+
+Critérios #1–#5 do round 1 permanecem inalterados. Adicionado:
+
+6. **Hand-off pós-merge**: após o PR ser mergeado no Paperclip core, postar comment em [SIMAA-2205](/SIMAA/issues/SIMAA-2205) sinalizando:
+   - PR merged (com link direto ao PR);
+   - Motor corrigido; control plane precisa de redeploy para ativar o fix;
+   - Board/CTO nomeado como responsável por orquestrar o redeploy da wave SIMAA-2180-2197.
+   — **verificado pela existência do comment antes de marcar SIMAA-2206 como `done`**.
+
+### Cobertura cruzada spec → contrato (revisada)
+
+| Spec critério | Contract item | Status |
+|---|---|---|
+| #1 Transição approval→review sem 422 | Critério aceite #1 + teste cenário bloqueante | OK |
+| #2 Anti-auto-aprovação preservado | Critério aceite #2 + teste anti-auto-aprovação | OK |
+| #3 Testes automatizados existem | Critério aceite #3 | OK |
+| #4 Build + suite completa passam | Checks 2+3 "Como vou verificar" (round 1 revisado) | **OK** |
+| #5 PR aberto linkando 2206/2205 | Critério aceite #5 | OK |
+| #6 Comment pós-merge em SIMAA-2205 | Critério aceite #6 (adicionado) | **OK** |
