@@ -115,3 +115,34 @@ Critérios #1–#5 do round 1 permanecem inalterados. Adicionado:
 | #4 Build + suite completa passam | Checks 2+3 "Como vou verificar" (round 1 revisado) | **OK** |
 | #5 PR aberto linkando 2206/2205 | Critério aceite #5 | OK |
 | #6 Comment pós-merge em SIMAA-2205 | Critério aceite #6 (adicionado) | **OK** |
+
+---
+
+## Verifier review (round 2)
+
+### Aprovados
+
+- **(c) Runner confirmado** — APROVADO. Verificado: `server/package.json` realmente não tem script `test`; `vitest.config.ts` na raiz lista `server` em `test.projects`; `pnpm vitest run --project server` é invocação válida.
+- **(a) "Como vou verificar" expandido** — APROVADO. Os 5 checks cobrem os planos esperados:
+  - Check 1 (smoke do arquivo) — feedback rápido durante iteração.
+  - Check 2 (suite completa do `server` project) — captura regressão lateral; fecha spec critério #4 (parte "testes").
+  - Check 3 (`pnpm --filter @paperclipai/server build` = `tsc && cp onboarding-assets`) — fecha spec critério #4 (parte "build"), pega erros de bundling/cópia que `typecheck --noEmit` não detecta.
+  - Check 4 (typecheck mantido) — defesa em profundidade para erros TS.
+  - Check 5 (inspeção visual) — confirma escopo cirúrgico de 1 linha.
+- **(b) Critério de aceite #6 adicionado** — APROVADO. Hand-off pós-merge fica explícito: link ao PR, sinalização "motor corrigido / control plane precisa redeploy", board/CTO nomeado como owner do redeploy. Verificável antes de marcar `done`.
+
+### Cobertura cruzada (spec → contrato)
+
+Todos os 6 critérios do spec da issue agora têm correspondência clara em "Critérios de aceite" + "Como vou verificar". Sem gap residual.
+
+### Escopo
+
+"Fora do escopo" mantém-se sólido (4 outras chamadas de `selectStageParticipant` não tocadas, sem refactor, sem telemetria, sem mexer em simplafy-admin, sem revogar SIMAA-2198, sem contornos issue-a-issue).
+
+### Testabilidade
+
+Cada check produz PASS/FAIL óbvio (exit code de vitest/tsc + diff inspecionável + presença de comment em SIMAA-2205).
+
+### Veredito
+
+**APROVADO — round 2.** Contrato pactuado. Builder pode prosseguir para implementação. Próximo gate: smoke pre-PR.
